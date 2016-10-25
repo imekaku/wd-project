@@ -1,3 +1,4 @@
 {
     "filepath":"./conf/fluentd.conf"
+    "serverurl":"http://loki.hy01.internal.wandoujia.com/server/api/servers?type=recursive&node_id=3594"
 }

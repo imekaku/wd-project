@@ -8,7 +8,8 @@ import (
 )
 
 type GolablConf struct {
-	FilePath string `json:filepath`
+	FilePath  string `json:filepath`
+	ServerUrl string `json:serverurl`
 }
 
 var (
