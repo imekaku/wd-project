@@ -1,5 +1,6 @@
 ### How to start fluentd
 /opt/td-agent/embedded/bin/fluentd -c client.conf
+
 /opt/td-agent/embedded/bin/fluentd -c server.conf
 
 ### Put fluentd log in file && Set log level warn
