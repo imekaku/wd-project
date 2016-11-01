@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"byte"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,9 +10,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"regexp"
 	"strings"
+	"os"
 	"text/template"
 )
 
@@ -46,43 +44,56 @@ func (c *OwnController) ChangeRegexp() {
 	var fss FluentdServiceServer
 
 	var service_name string
-	service_keys := redis.Strings(con.Do("KEYS", "service:*"))
+	service_keys, _ := redis.Strings(con.Do("KEYS", "service:*"))
+
 	for _, key := range service_keys {
 		service_name = strings.Split(key, ":")[1]
-		regexp = redis.String(c.Do("GET", service_name))
-		fss.Service[service_name] = regexp
+		regexp_, _ := redis.String(con.Do("GET", service_name))
+		fss.Service[service_name] = regexp_
 	}
 
 	fss.Server = c.Deploy()
 
-	templ := template.ParseFiles(conf.Config().FileTemplate)
+	templ, _ := template.ParseFiles(conf.Config().FileTemplate)
 	var doc bytes.Buffer
 	templ.Execute(&doc, fss)
 	new_conf := doc.String()
+
+	if !Exist(conf.Config().FilePath) {
+		os.Create(conf.Config().FilePath)
+	}
 	ioutil.WriteFile(conf.Config().FilePath, []byte(new_conf), 0)
 }
 
 func (c *OwnController) DeleteService() {
 	service_string := c.GetString("service")
-
+	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
+	defer con.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	con.Do("DEL", "service:"+service_string)
 
 	var fss FluentdServiceServer
 
 	var service_name string
-	service_keys := redis.Strings(con.Do("KEYS", "service:*"))
+	service_keys, _ := redis.Strings(con.Do("KEYS", "service:*"))
 	for _, key := range service_keys {
 		service_name = strings.Split(key, ":")[1]
-		regexp = redis.String(c.Do("GET", service_name))
-		fss.Service[service_name] = regexp
+		regexp_, _ := redis.String(con.Do("GET", service_name))
+		fss.Service[service_name] = regexp_
 	}
 
 	fss.Server = c.Deploy()
 
-	templ := template.ParseFiles(conf.Config().FileTemplate)
+	templ, _ := template.ParseFiles(conf.Config().FileTemplate)
 	var doc bytes.Buffer
 	templ.Execute(&doc, fss)
 	new_conf := doc.String()
+	if !Exist(conf.Config().FilePath) {
+		os.Create(conf.Config().FilePath)
+	}
 	ioutil.WriteFile(conf.Config().FilePath, []byte(new_conf), 0)
 }
 
@@ -106,4 +117,9 @@ func getJson(target *models.ServerInfo) error {
 	defer r.Body.Close()
 
 	return json.NewDecoder(r.Body).Decode(target)
+}
+
+func Exist(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil || os.IsExist(err)
 }
