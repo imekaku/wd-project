@@ -2,7 +2,7 @@ package conf
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/astaxie/beego"
 	"io/ioutil"
 	"os"
 )
@@ -26,18 +26,18 @@ func Config() *GolablConf {
 func ParseConfig(filename string) {
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("os.Open err=", err)
+		beego.Emergency("os.Open err=", err)
 	}
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		fmt.Println("ioutil.ReadAll err=", err)
+		beego.Emergency("ioutil.ReadAll err=", err)
 	}
 
 	var cfg GolablConf
 	err = json.Unmarshal(data, &cfg)
 	if err != nil {
-		fmt.Println("json.Unmarshal err=", err)
+		beego.Emergency("json.Unmarshal err=", err)
 	}
 	config = &cfg
 }

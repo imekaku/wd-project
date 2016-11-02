@@ -3,7 +3,6 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/conf/conf"
 	"github.com/conf/models"
@@ -28,14 +27,14 @@ func (c *OwnController) ChangeRegexp() {
 	service_string := c.GetString("service")
 	regexp_string := c.GetString("regexp")
 	if service_string == "" {
-		fmt.Println("service = nil")
+		beego.Emergency("service = nil")
 		return
 	}
 
 	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
 	defer con.Close()
 	if err != nil {
-		fmt.Println(err)
+		beego.Emergency(err)
 		return
 	}
 
@@ -50,7 +49,7 @@ func (c *OwnController) ChangeRegexp() {
 		service_name = strings.Split(key, ":")[1]
 		regexp_, err := redis.String(con.Do("GET", key))
 		if err != nil {
-			fmt.Println(err)
+			beego.Emergency(err)
 		}
 		fss.Service[service_name] = regexp_
 	}
@@ -73,7 +72,7 @@ func (c *OwnController) DeleteService() {
 	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
 	defer con.Close()
 	if err != nil {
-		fmt.Println(err)
+		beego.Emergency(err)
 		return
 	}
 	con.Do("DEL", "service:"+service_string)
@@ -105,7 +104,7 @@ func (c *OwnController) Deploy() {
 	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
 	defer con.Close()
 	if err != nil {
-		fmt.Println(err)
+		beego.Emergency(err)
 		return
 	}
 
