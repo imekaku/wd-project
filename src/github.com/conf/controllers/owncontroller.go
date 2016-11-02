@@ -10,8 +10,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -42,13 +42,16 @@ func (c *OwnController) ChangeRegexp() {
 	con.Do("SET", "service:"+service_string, regexp_string)
 
 	var fss FluentdServiceServer
+	fss.Service = make(map[string]string)
 
 	var service_name string
 	service_keys, _ := redis.Strings(con.Do("KEYS", "service:*"))
-
 	for _, key := range service_keys {
 		service_name = strings.Split(key, ":")[1]
-		regexp_, _ := redis.String(con.Do("GET", service_name))
+		regexp_, err := redis.String(con.Do("GET", key))
+		if err != nil {
+			fmt.Println(err)
+		}
 		fss.Service[service_name] = regexp_
 	}
 

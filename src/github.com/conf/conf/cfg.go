@@ -8,11 +8,11 @@ import (
 )
 
 type GolablConf struct {
-	FilePath           string `json:file_path`
-	ServerUrl          string `json:server_url`
-	FileTemplate       string `json:file_template`
-	RedisConnectMethod string `json:redis_connect_method`
-	RedisAddressPort   string `json:redis_address_port`
+	FilePath           string `json:filepath`
+	ServerUrl          string `json:serverurl`
+	FileTemplate       string `json:filetemplate`
+	RedisConnectMethod string `json:redisconnectmethod`
+	RedisAddressPort   string `json:redisaddressport`
 }
 
 var (

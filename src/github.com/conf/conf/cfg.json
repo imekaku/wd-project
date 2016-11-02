@@ -1,7 +1,7 @@
 {
-    "file_path":"/home/lee/applications/go/src/github.com/wd-project/src/github.com/conf/conf/fluentd.conf",
-    "server_url":"http://loki.hy01.internal.wandoujia.com/server/api/servers?type=recursive&node_id=4185",
-    "file_template":"/home/lee/applications/go/src/github.com/wd-project/src/github.com/conf/conf/template.conf",
-    "redis_connect_method":"tcp",
-    "redis_address_port":"127.0.0.1:6379"
+    "filepath":"/home/lee/applications/go/src/github.com/wd-project/src/github.com/conf/conf/fluentd.conf",
+    "serverurl":"http://loki.hy01.internal.wandoujia.com/server/api/servers?type=recursive&node_id=4184",
+    "filetemplate":"/home/lee/applications/go/src/github.com/wd-project/src/github.com/conf/conf/template.conf",
+    "redisconnectmethod":"tcp",
+    "redisaddressport":"127.0.0.1:6379"
 }
