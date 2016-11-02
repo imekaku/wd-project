@@ -55,7 +55,7 @@ func (c *OwnController) ChangeRegexp() {
 		fss.Service[service_name] = regexp_
 	}
 
-	fss.Server = c.Deploy()
+	fss.Server = c.ServerList()
 
 	templ, _ := template.ParseFiles(conf.Config().FileTemplate)
 	var doc bytes.Buffer
@@ -79,6 +79,7 @@ func (c *OwnController) DeleteService() {
 	con.Do("DEL", "service:"+service_string)
 
 	var fss FluentdServiceServer
+	fss.Service = make(map[string]string)
 
 	var service_name string
 	service_keys, _ := redis.Strings(con.Do("KEYS", "service:*"))
@@ -88,7 +89,7 @@ func (c *OwnController) DeleteService() {
 		fss.Service[service_name] = regexp_
 	}
 
-	fss.Server = c.Deploy()
+	fss.Server = c.ServerList()
 
 	templ, _ := template.ParseFiles(conf.Config().FileTemplate)
 	var doc bytes.Buffer
@@ -100,7 +101,38 @@ func (c *OwnController) DeleteService() {
 	ioutil.WriteFile(conf.Config().FilePath, []byte(new_conf), 0)
 }
 
-func (c *OwnController) Deploy() []string {
+func (c *OwnController) Deploy() {
+	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
+	defer con.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	var fss FluentdServiceServer
+	fss.Service = make(map[string]string)
+
+	var service_name string
+	service_keys, _ := redis.Strings(con.Do("KEYS", "service:*"))
+	for _, key := range service_keys {
+		service_name = strings.Split(key, ":")[1]
+		regexp_, _ := redis.String(con.Do("GET", service_name))
+		fss.Service[service_name] = regexp_
+	}
+
+	fss.Server = c.ServerList()
+
+	templ, _ := template.ParseFiles(conf.Config().FileTemplate)
+	var doc bytes.Buffer
+	templ.Execute(&doc, fss)
+	new_conf := doc.String()
+	if !Exist(conf.Config().FilePath) {
+		os.Create(conf.Config().FilePath)
+	}
+	ioutil.WriteFile(conf.Config().FilePath, []byte(new_conf), 0)
+}
+
+func (c *OwnController) ServerList() []string {
 	var serverinfo models.ServerInfo
 	getJson(&serverinfo)
 
