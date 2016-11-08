@@ -1,7 +1,0 @@
-{
-    "filepath":"./conf/td-agent.conf",
-    "serverurl":"http://loki.hy01.internal.wandoujia.com/server/api/servers?type=recursive&node_id=4185",
-    "filetemplate":"./conf/template.conf",
-    "redisconnectmethod":"tcp",
-    "redisaddressport":"127.0.0.1:6379"
-}
