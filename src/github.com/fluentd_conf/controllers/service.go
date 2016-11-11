@@ -33,21 +33,35 @@ func (c *ServiceController) GetServicesList() {
 		return
 	}
 
-	servicesList := make(map[string]string)
+	var fluentdSS FluentdServiceServer
+	fluentdSS.Services = make(map[string]string)
+
 	var serviceName string
-	serviceKeys, _ := redis.Strings(con.Do("KEYS", "service:*"))
-	for _, key := range serviceKeys {
+	ServiceKeys, _ := redis.Strings(con.Do("KEYS", "service:*"))
+	for _, key := range ServiceKeys {
 		serviceName = strings.Split(key, ":")[1]
-		serviceRegexp, err := redis.String(con.Do("GET", key))
-		if err != nil {
-			beego.Emergency(err)
-			c.Data["json"] = map[string]interface{}{"success": false, "error": err}
-			return
-		}
-		servicesList[serviceName] = serviceRegexp
+		serviceRegexp, _ := redis.String(con.Do("GET", key))
+		fluentdSS.Services[serviceName] = serviceRegexp
 	}
 
-	c.Data["json"] = servicesList
+	fluentdSS.Servers = c.GetServersList()
+
+	templ, err := template.ParseFiles(conf.Config().FileTemplate)
+	if err != nil {
+		beego.Emergency(err)
+		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
+		c.ServeJSON()
+		return
+	}
+	var doc bytes.Buffer
+	templ.Execute(&doc, fluentdSS)
+	newConf := doc.String()
+	if !Exist(conf.Config().FilePath) {
+		os.Create(conf.Config().FilePath)
+	}
+	ioutil.WriteFile(conf.Config().FilePath, []byte(newConf), 0)
+
+	c.Data["json"] = fluentdSS.Services
 	c.ServeJSON()
 }
 
@@ -123,47 +137,6 @@ func (c *ServiceController) DeleteService() {
 		return
 	}
 
-	var doc bytes.Buffer
-	templ.Execute(&doc, fluentdSS)
-	newConf := doc.String()
-	if !Exist(conf.Config().FilePath) {
-		os.Create(conf.Config().FilePath)
-	}
-	ioutil.WriteFile(conf.Config().FilePath, []byte(newConf), 0)
-	c.Data["json"] = map[string]interface{}{"success": true}
-	c.ServeJSON()
-}
-
-func (c *ServiceController) Deploy() {
-	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
-	defer con.Close()
-	if err != nil {
-		beego.Emergency(err)
-		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
-		c.ServeJSON()
-		return
-	}
-
-	var fluentdSS FluentdServiceServer
-	fluentdSS.Services = make(map[string]string)
-
-	var serviceName string
-	ServiceKeys, _ := redis.Strings(con.Do("KEYS", "service:*"))
-	for _, key := range ServiceKeys {
-		serviceName = strings.Split(key, ":")[1]
-		serviceRegexp, _ := redis.String(con.Do("GET", key))
-		fluentdSS.Services[serviceName] = serviceRegexp
-	}
-
-	fluentdSS.Servers = c.GetServersList()
-
-	templ, err := template.ParseFiles(conf.Config().FileTemplate)
-	if err != nil {
-		beego.Emergency(err)
-		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
-		c.ServeJSON()
-		return
-	}
 	var doc bytes.Buffer
 	templ.Execute(&doc, fluentdSS)
 	newConf := doc.String()

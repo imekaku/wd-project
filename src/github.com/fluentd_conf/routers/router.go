@@ -7,7 +7,7 @@ import (
 
 func init() {
 	beego.Router("/", &controllers.MainController{})
-	beego.Router("/service", &controllers.ServiceController{}, `get:GetServicesList;post:AddServiceRegexp`)
-	beego.Router("/service/:service", &controllers.ServiceController{},
+	beego.Router("/services", &controllers.ServiceController{}, `get:GetServicesList;post:AddServiceRegexp`)
+	beego.Router("/services/:service", &controllers.ServiceController{},
 		`get:GetServiceRegexp;put:ChangeServiceRegexp;delete:DeleteService`)
 }
