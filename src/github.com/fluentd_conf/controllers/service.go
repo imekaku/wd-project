@@ -3,6 +3,7 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/fluentd_conf/conf"
 	"github.com/fluentd_conf/models"
@@ -65,12 +66,24 @@ func (c *ServiceController) GetServicesList() {
 	c.ServeJSON()
 }
 
+// AddServiceRegexp parses to add the regexp of some service
 func (c *ServiceController) AddServiceRegexp() {
-	serviceName := c.GetString("service")
-	serviceRegexp := c.GetString("regexp")
+	var requestServiceRegexp models.RequestServiceRegexp
+	fmt.Println(string(c.Ctx.Input.RequestBody))
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestServiceRegexp); err != nil {
+		fmt.Println("err:", err)
+	} else {
+		fmt.Println("Anything ok")
+	}
+	fmt.Println(requestServiceRegexp)
+	serviceName := requestServiceRegexp.ServiceName
+	serviceRegexp := requestServiceRegexp.ServiceRegexp
 
+	fmt.Println("serviceName:", serviceName)
+	fmt.Println("serviceRegexp:", serviceRegexp)
 	if serviceName == "" {
 		beego.Emergency("service = nil")
+		c.Ctx.ResponseWriter.WriteHeader(500)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": "service = nil"}
 		c.ServeJSON()
 		return

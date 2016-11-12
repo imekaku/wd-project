@@ -10,6 +10,6 @@ type HostInfo struct {
 }
 
 type RequestServiceRegexp struct {
-	ServiceName   string `json:service`
-	ServiceRegexp string `json:regexp`
+	ServiceName   string `json:"service"`
+	ServiceRegexp string `json:"regexp"`
 }
