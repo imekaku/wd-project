@@ -23,7 +23,7 @@ type FluentdServiceServer struct {
 	Servers  []string // fluentd server
 }
 
-// GetServicesList parses to get all services and the regexp of services
+// GetServicesList parses to get all services and the regexps of services
 func (c *ServiceController) GetServicesList() {
 	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
 	defer con.Close()
@@ -37,11 +37,17 @@ func (c *ServiceController) GetServicesList() {
 	fluentdSS.Services = make(map[string]string)
 
 	var serviceName string
+	var serviceNameRegexList []map[string]string
 	ServiceKeys, _ := redis.Strings(con.Do("KEYS", "service:*"))
 	for _, key := range ServiceKeys {
 		serviceName = strings.Split(key, ":")[1]
 		serviceRegexp, _ := redis.String(con.Do("GET", key))
 		fluentdSS.Services[serviceName] = serviceRegexp
+		serviceNameRegexList = append(serviceNameRegexList,
+			map[string]string{
+				"service": serviceName,
+				"regexp":  serviceRegexp,
+			})
 	}
 
 	fluentdSS.Servers = c.GetServersList()
@@ -61,16 +67,24 @@ func (c *ServiceController) GetServicesList() {
 	}
 	ioutil.WriteFile(conf.Config().FilePath, []byte(newConf), 0)
 
-	c.Data["json"] = fluentdSS.Services
+	c.Data["json"] = serviceNameRegexList
 	c.ServeJSON()
 }
 
+// AddServiceRegexp parses to add a service regexp
 func (c *ServiceController) AddServiceRegexp() {
-	serviceName := c.GetString("service")
-	serviceRegexp := c.GetString("regexp")
+	var requestServiceRegexp models.RequestServiceRegexp
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestServiceRegexp); err != nil {
+		c.Ctx.ResponseWriter.WriteHeader(400)
+		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
+		c.ServeJSON()
+		return
+	}
+	serviceName := requestServiceRegexp.ServiceName
+	serviceRegexp := requestServiceRegexp.ServiceRegexp
 
 	if serviceName == "" {
-		beego.Emergency("service = nil")
+		c.Ctx.ResponseWriter.WriteHeader(400)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": "service = nil"}
 		c.ServeJSON()
 		return
@@ -84,6 +98,7 @@ func (c *ServiceController) GetServiceRegexp() {
 	defer con.Close()
 	if err != nil {
 		beego.Emergency(err)
+		c.Ctx.ResponseWriter.WriteHeader(400)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
@@ -91,6 +106,7 @@ func (c *ServiceController) GetServiceRegexp() {
 	serviceRegexp, err := redis.String(con.Do("GET", "service:"+serviceName))
 	if err != nil {
 		beego.Emergency(err)
+		c.Ctx.ResponseWriter.WriteHeader(400)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
@@ -164,7 +180,9 @@ func (c *ServiceController) UpdateServiceRegexp(serviceName, serviceRegexp strin
 	con, err := redis.Dial(conf.Config().RedisConnectMethod, conf.Config().RedisAddressPort)
 	defer con.Close()
 	if err != nil {
+		// redis connect error
 		beego.Emergency(err)
+		c.Ctx.ResponseWriter.WriteHeader(500)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
@@ -172,12 +190,15 @@ func (c *ServiceController) UpdateServiceRegexp(serviceName, serviceRegexp strin
 
 	_, err = con.Do("SET", "service:"+serviceName, serviceRegexp)
 	if err != nil {
+		// redis set error
 		beego.Emergency(err)
+		c.Ctx.ResponseWriter.WriteHeader(500)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
 	}
 
+	// get services and regexps
 	var fluentdSS FluentdServiceServer
 	fluentdSS.Services = make(map[string]string)
 
@@ -191,10 +212,13 @@ func (c *ServiceController) UpdateServiceRegexp(serviceName, serviceRegexp strin
 		fluentdSS.Services[serviceName] = serviceRegexp
 	}
 
+	// get servers
 	fluentdSS.Servers = c.GetServersList()
 
 	templ, err := template.ParseFiles(conf.Config().FileTemplate)
 	if err != nil {
+		// template parse error
+		c.Ctx.ResponseWriter.WriteHeader(500)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
@@ -206,6 +230,7 @@ func (c *ServiceController) UpdateServiceRegexp(serviceName, serviceRegexp strin
 	if !Exist(conf.Config().FilePath) {
 		os.Create(conf.Config().FilePath)
 	}
+	// get new fluentd td-agent configure file
 	ioutil.WriteFile(conf.Config().FilePath, []byte(newConf), 0)
 	c.Data["json"] = map[string]interface{}{"success": true}
 	c.ServeJSON()
