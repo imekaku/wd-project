@@ -43,6 +43,8 @@ func (c *ServiceController) GetServicesList() {
 		serviceName = strings.Split(key, ":")[1]
 		serviceRegexp, _ := redis.String(con.Do("GET", key))
 		fluentdSS.Services[serviceName] = serviceRegexp
+
+		// serviceNameRegexList for response content
 		serviceNameRegexList = append(serviceNameRegexList,
 			map[string]string{
 				"service": serviceName,
@@ -55,6 +57,7 @@ func (c *ServiceController) GetServicesList() {
 	templ, err := template.ParseFiles(conf.Config().FileTemplate)
 	if err != nil {
 		beego.Emergency(err)
+		c.Ctx.ResponseWriter.WriteHeader(500)
 		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
 		c.ServeJSON()
 		return
@@ -111,13 +114,21 @@ func (c *ServiceController) GetServiceRegexp() {
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = map[string]interface{}{"success": true, "service": serviceName, "regexp": serviceRegexp}
+	c.Data["json"] = map[string]interface{}{"service": serviceName, "regexp": serviceRegexp}
 	c.ServeJSON()
 }
 
 func (c *ServiceController) ChangeServiceRegexp() {
 	serviceName := c.GetString(":service")
-	serviceRegexp := c.GetString("regexp")
+
+	var requestServiceRegexp models.RequestServiceRegexp
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestServiceRegexp); err != nil {
+		c.Ctx.ResponseWriter.WriteHeader(400)
+		c.Data["json"] = map[string]interface{}{"success": false, "error": err}
+		c.ServeJSON()
+		return
+	}
+	serviceRegexp := requestServiceRegexp.ServiceRegexp
 	c.UpdateServiceRegexp(serviceName, serviceRegexp)
 }
 
